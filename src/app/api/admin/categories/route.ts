@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, apiError } from "@/lib/api";
-import { slugify } from "@/lib/utils";
+import { uniqueCategorySlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +14,6 @@ const categorySchema = z.object({
   imageUrl: z.string().optional().nullable(),
   sortOrder: z.number().int().default(0),
 });
-
-/** Generate a category slug that is unique, appending -2, -3, ... if taken. */
-export async function uniqueCategorySlug(base: string, excludeId?: string): Promise<string> {
-  const root = slugify(base) || "category";
-  let candidate = root;
-  let suffix = 1;
-  while (true) {
-    const existing = await prisma.category.findUnique({ where: { slug: candidate } });
-    if (!existing || existing.id === excludeId) return candidate;
-    suffix += 1;
-    candidate = `${root}-${suffix}`;
-  }
-}
 
 export async function GET() {
   const { error } = await requireAdmin();

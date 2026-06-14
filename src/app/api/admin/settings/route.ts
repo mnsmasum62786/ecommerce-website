@@ -54,7 +54,9 @@ export async function PUT(req: Request) {
     currency: d.currency,
     currencySymbol: d.currencySymbol,
     supportEmail: d.supportEmail,
-    supportPhone: d.supportPhone?.trim() || null,
+    // supportPhone is non-nullable in the schema; omit (undefined) when blank
+    // so create falls back to the default and update leaves it unchanged.
+    supportPhone: d.supportPhone?.trim() || undefined,
     addressLine: d.addressLine?.trim() || null,
     shippingFlatCents: d.shippingFlatCents,
     freeShippingThreshold: d.freeShippingThreshold,

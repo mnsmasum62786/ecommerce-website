@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, apiError } from "@/lib/api";
-import { uniqueCategorySlug } from "../route";
+import { uniqueCategorySlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 

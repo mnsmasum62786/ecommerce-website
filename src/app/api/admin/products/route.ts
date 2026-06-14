@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, apiError } from "@/lib/api";
-import { slugify } from "@/lib/utils";
+import { uniqueProductSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -26,20 +26,6 @@ const productSchema = z.object({
   isActive: z.boolean().default(true),
   images: z.array(z.string()).default([]),
 });
-
-/** Generate a slug that is unique across products, appending -2, -3, ... if taken. */
-export async function uniqueProductSlug(base: string, excludeId?: string): Promise<string> {
-  const root = slugify(base) || "product";
-  let candidate = root;
-  let suffix = 1;
-  // Loop until we find a slug not used by another product.
-  while (true) {
-    const existing = await prisma.product.findUnique({ where: { slug: candidate } });
-    if (!existing || existing.id === excludeId) return candidate;
-    suffix += 1;
-    candidate = `${root}-${suffix}`;
-  }
-}
 
 export async function POST(req: Request) {
   const { error } = await requireAdmin();

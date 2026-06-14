@@ -8,7 +8,8 @@ export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
   if (!stripeClient) {
-    stripeClient = new Stripe(key, { apiVersion: "2024-11-20.acacia" });
+    // Pin to the SDK's bundled API version to satisfy the typed client.
+    stripeClient = new Stripe(key, { apiVersion: "2025-02-24.acacia" });
   }
   return stripeClient;
 }
