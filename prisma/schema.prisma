@@ -1,0 +1,368 @@
+// Prisma schema for the Verdant organic food store.
+// Database: PostgreSQL (Vercel Postgres / Neon).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth & users
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String     @unique
+  // Hashed with bcrypt. Null for customers who only ever checked out as guests.
+  passwordHash  String?
+  role          Role       @default(CUSTOMER)
+  emailVerified DateTime?
+  image         String?
+  addresses     Address[]
+  orders        Order[]
+  carts         Cart[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?  // e.g. "Home", "Work"
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String
+  country    String   @default("United States")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  // Self-relation for nested categories.
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId])
+}
+
+model Product {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique
+  description     String        @db.Text
+  shortDesc       String?
+  // Price stored in cents to avoid floating point issues.
+  priceCents      Int
+  compareAtCents  Int?          // Original/strikethrough price for sales.
+  sku             String?       @unique
+  stock           Int           @default(0)
+  lowStockAt      Int           @default(5)
+  unit            String        @default("each") // e.g. "lb", "bunch", "12 oz"
+  // Organic attributes.
+  isOrganic       Boolean       @default(true)
+  certification   String?       // e.g. "USDA Organic", "Non-GMO Project Verified"
+  // Merchandising flags.
+  isFeatured      Boolean       @default(false)
+  isBestSeller    Boolean       @default(false)
+  isActive        Boolean       @default(true)
+  tags            String[]      @default([])
+  images          ProductImage[]
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id])
+  orderItems      OrderItem[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------------------
+// Cart (DB-backed for logged-in users; guests use localStorage)
+// ---------------------------------------------------------------------------
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  cart      Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  quantity  Int    @default(1)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  STRIPE
+  COD
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Snapshot of customer/contact details at time of order.
+  email           String
+  phone           String
+  customerName    String
+
+  // Shipping address snapshot.
+  shipFullName    String
+  shipLine1       String
+  shipLine2       String?
+  shipCity        String
+  shipState       String?
+  shipPostalCode  String
+  shipCountry     String        @default("United States")
+
+  items           OrderItem[]
+
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod @default(COD)
+  stripeSessionId String?
+  stripePaymentId String?
+
+  // Monetary fields in cents.
+  subtotalCents   Int
+  shippingCents   Int           @default(0)
+  taxCents        Int           @default(0)
+  discountCents   Int           @default(0)
+  totalCents      Int
+
+  couponCode      String?
+  deliveryOption  String        @default("standard")
+  customerNote    String?
+  refundFlag      Boolean       @default(false)
+
+  webhookDeliveries WebhookDelivery[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // Snapshot of product data at purchase time.
+  name        String
+  priceCents  Int
+  quantity    Int
+  imageUrl    String?
+
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// Coupons / discounts
+// ---------------------------------------------------------------------------
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+model Coupon {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  description   String?
+  type          DiscountType @default(PERCENT)
+  // For PERCENT: 0-100. For FIXED: amount in cents.
+  value         Int
+  minSpendCents Int          @default(0)
+  maxUses       Int?         // Null = unlimited.
+  usedCount     Int          @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Custom Script Manager (site-wide injected scripts)
+// ---------------------------------------------------------------------------
+
+model ScriptSettings {
+  // Single-row table; we always read/write id = "default".
+  id              String   @id @default("default")
+  // Managed integrations.
+  gtmId           String?  // e.g. GTM-XXXXXXX
+  gtmEnabled      Boolean  @default(false)
+  ga4Id           String?  // e.g. G-XXXXXXXXXX
+  ga4Enabled      Boolean  @default(false)
+  metaPixelId     String?
+  metaPixelEnabled Boolean @default(false)
+  tiktokPixelId   String?
+  tiktokEnabled   Boolean  @default(false)
+  // Free-form raw script slots.
+  headScripts     String?  @db.Text
+  headEnabled     Boolean  @default(true)
+  bodyStartScripts String? @db.Text
+  bodyStartEnabled Boolean @default(true)
+  footerScripts   String?  @db.Text
+  footerEnabled   Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Webhook Manager
+// ---------------------------------------------------------------------------
+
+model Webhook {
+  id          String            @id @default(cuid())
+  name        String
+  url         String
+  secret      String            // Used to sign payloads (HMAC-SHA256).
+  // Subscribed events stored as string array, e.g. ["order.created","order.paid"].
+  events      String[]          @default([])
+  isActive    Boolean           @default(true)
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum DeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model WebhookDelivery {
+  id           String         @id @default(cuid())
+  webhookId    String
+  webhook      Webhook        @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  orderId      String?
+  order        Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  event        String
+  payload      String         @db.Text
+  status       DeliveryStatus @default(PENDING)
+  responseCode Int?
+  responseBody String?        @db.Text
+  attempts     Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([webhookId])
+}
+
+// ---------------------------------------------------------------------------
+// Store settings & newsletter
+// ---------------------------------------------------------------------------
+
+model StoreSettings {
+  id              String   @id @default("default")
+  storeName       String   @default("Verdant Organic Market")
+  logoUrl         String?
+  currency        String   @default("USD")
+  currencySymbol  String   @default("$")
+  supportEmail    String   @default("hello@verdantmarket.com")
+  supportPhone    String   @default("+1 (555) 010-2345")
+  addressLine     String?
+  // Flat shipping rate in cents; free over threshold.
+  shippingFlatCents     Int @default(599)
+  freeShippingThreshold Int @default(7500)
+  taxRatePercent  Float    @default(0)
+  facebookUrl     String?
+  instagramUrl    String?
+  twitterUrl      String?
+  announcement    String?
+  updatedAt       DateTime @updatedAt
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+}
