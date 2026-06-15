@@ -47,4 +47,4 @@ This document records the assumptions and architectural choices made while build
 - Email and image upload **degrade gracefully** when Resend/Blob aren't configured.
 
 ## Seed data
-- 6 categories, **24 organic products** with realistic names/descriptions/prices/images, an admin user (from `ADMIN_EMAIL`/`ADMIN_PASSWORD`), store + script settings rows, and 3 sample coupons (`WELCOME15`, `FRESH10`, `GREEN20`). The seed is idempotent (upserts).
+- 6 categories, **26 organic products** with realistic names/descriptions/prices/images, an admin user (from `ADMIN_EMAIL`/`ADMIN_PASSWORD`), store + script settings rows, and 3 sample coupons (`WELCOME15`, `FRESH10`, `GREEN20`). The seed is idempotent (upserts).

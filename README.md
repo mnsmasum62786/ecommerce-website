@@ -71,7 +71,7 @@ At minimum you need `DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`, and `NEXTAU
 ### 4. Set up the database
 ```bash
 npx prisma db push     # create tables from the schema
-npm run seed           # seed categories, 24 products, admin user, coupons
+npm run seed           # seed categories, 26 products, admin user, coupons
 ```
 
 ### 5. Run
