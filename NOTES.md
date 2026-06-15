@@ -37,6 +37,11 @@ This document records the assumptions and architectural choices made while build
 - Each delivery POSTs a JSON payload (order id, number, status, customer, items, totals, timestamp) with an **HMAC-SHA256 signature** in the `X-Verdant-Signature` header (and `X-Verdant-Event`), signed with the per-webhook secret so receivers can verify authenticity.
 - Deliveries are **logged** with status/response/attempts and **retried once** on failure. A "Test" button sends a sample payload. Dispatch is wrapped so webhook problems never block order processing.
 
+## Ecommerce tracking (GA4 + Meta CAPI)
+- **GA4 / GTM:** the storefront emits GA4-schema ecommerce events — `view_item_list`, `view_item`, `add_to_cart`, `begin_checkout`, and `purchase`. Events are pushed to `window.dataLayer` (consumed by GTM when a Container ID is set) and, when GA4 is configured directly (Measurement ID, no GTM), also sent via `gtag('event', …)`. `TrackingConfig` injects `window.__VT__` so the client helpers (`src/lib/analytics.ts`) know which integrations are active.
+- **Meta Conversions API (server-side):** when a Pixel ID + Access Token are set and CAPI is enabled in the Script Manager, ecommerce events are sent **server-side** — `ViewContent`, `AddToCart`, `InitiateCheckout` via `/api/track` (browser → our server → Meta), and `Purchase` directly from the checkout API for reliability. User data is SHA-256 hashed; `_fbp`/`_fbc`, IP, and user-agent are forwarded; `event_id` enables browser/server dedup. See `src/lib/meta-capi.ts`.
+- These activate purely from the admin **Script Manager** — no code changes needed.
+
 ## Shipping & tax (defaults)
 - Flat shipping **$5.99**, **free over $75**. Express delivery adds **$7.00**. Tax rate defaults to **0%** (configurable in Settings — sales tax varies by jurisdiction, so it's left for the operator to set).
 
