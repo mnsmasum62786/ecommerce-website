@@ -121,8 +121,10 @@ export async function runSeed(prisma: PrismaClient): Promise<SeedResult> {
   }
 
   // --- Products ---
-  for (const p of PRODUCTS) {
+  for (const [i, p] of PRODUCTS.entries()) {
     const categoryId = categoryIdBySlug.get(p.category)!;
+    // Sequential, guaranteed-unique SKU (e.g. VRD-0001).
+    const sku = `VRD-${String(i + 1).padStart(4, "0")}`;
     const product = await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
@@ -146,7 +148,7 @@ export async function runSeed(prisma: PrismaClient): Promise<SeedResult> {
         shortDesc: p.shortDesc,
         priceCents: c(p.price),
         compareAtCents: p.compareAt ? c(p.compareAt) : null,
-        sku: p.slug.toUpperCase().replace(/-/g, "").slice(0, 12),
+        sku,
         stock: p.stock,
         lowStockAt: 10,
         unit: p.unit,
