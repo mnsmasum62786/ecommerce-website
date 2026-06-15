@@ -10,6 +10,7 @@ export async function TrackingConfig() {
     gtm: Boolean(scripts?.gtmEnabled && scripts?.gtmId),
     ga4: Boolean(scripts?.ga4Enabled && scripts?.ga4Id),
     meta: Boolean(scripts?.metaCapiEnabled && scripts?.metaPixelId && scripts?.metaAccessToken),
+    metaPixel: Boolean(scripts?.metaPixelEnabled && scripts?.metaPixelId),
     currency: store.currency || "USD",
   };
 
