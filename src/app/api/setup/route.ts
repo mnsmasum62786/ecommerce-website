@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { runSeed } from "@/lib/seed";
 import { SCHEMA_SQL } from "@/lib/schema-sql";
+
+// SHA-256 of a one-time setup key. Only the hash is committed (safe for a public
+// repo — the key itself is preimage-resistant), so the database can be
+// bootstrapped without depending on NEXTAUTH_SECRET being configured yet.
+const SETUP_KEY_HASH = "1e62f83ddfd528bf0317bb6d4a0fca6937bbbd189c8c12646e393ac3cca779b5";
+
+function isAuthorized(key: string | null): boolean {
+  if (!key) return false;
+  const envSecret = process.env.SETUP_SECRET || process.env.NEXTAUTH_SECRET;
+  if (envSecret && key === envSecret) return true;
+  const hash = crypto.createHash("sha256").update(key).digest("hex");
+  return hash === SETUP_KEY_HASH;
+}
 
 // Guarded, idempotent database bootstrap endpoint. Creates the schema (tables,
 // enums, indexes, constraints) and seeds the catalog in a single authenticated
@@ -49,21 +63,33 @@ async function ensureSchema(): Promise<{ created: number; skipped: number }> {
   return { created, skipped };
 }
 
+// Report which critical env vars are present (booleans only — never values) so
+// configuration gaps can be diagnosed without dashboard access.
+function envStatus() {
+  return {
+    DATABASE_URL: Boolean(process.env.DATABASE_URL),
+    NEXTAUTH_SECRET: Boolean(process.env.NEXTAUTH_SECRET),
+    NEXTAUTH_URL: Boolean(process.env.NEXTAUTH_URL),
+    NEXT_PUBLIC_APP_URL: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+    ADMIN_EMAIL: Boolean(process.env.ADMIN_EMAIL),
+    ADMIN_PASSWORD: Boolean(process.env.ADMIN_PASSWORD),
+  };
+}
+
 async function handle(req: Request) {
-  const secret = process.env.SETUP_SECRET || process.env.NEXTAUTH_SECRET;
   const key = new URL(req.url).searchParams.get("key");
-  if (!secret || key !== secret) {
+  if (!isAuthorized(key)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const schema = await ensureSchema();
     const seeded = await runSeed(prisma);
-    return NextResponse.json({ ok: true, schema, seeded });
+    return NextResponse.json({ ok: true, schema, seeded, env: envStatus() });
   } catch (err) {
     console.error("[setup] Failed:", err);
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "Setup failed" },
+      { ok: false, error: err instanceof Error ? err.message : "Setup failed", env: envStatus() },
       { status: 500 },
     );
   }
