@@ -5,6 +5,7 @@ import { ShoppingCart, Check, Minus, Plus } from "lucide-react";
 import { useCart, type CartLine } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { trackAddToCart } from "@/lib/analytics";
 
 type Props = {
   product: Omit<CartLine, "quantity">;
@@ -24,6 +25,13 @@ export function AddToCartButton({ product, withQuantity = false, className }: Pr
   function handleAdd() {
     if (outOfStock) return;
     addItem(product, qty);
+    // GA4 + Meta add_to_cart event.
+    trackAddToCart({
+      item_id: product.productId,
+      item_name: product.name,
+      price: product.priceCents / 100,
+      quantity: qty,
+    });
     setAdded(true);
     toast({ title: "Added to cart", description: `${product.name} × ${qty}` });
     setTimeout(() => setAdded(false), 1500);

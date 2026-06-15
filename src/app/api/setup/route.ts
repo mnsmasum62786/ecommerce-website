@@ -43,6 +43,27 @@ function statements(sql: string): string[] {
     .filter((s) => s.length > 0);
 }
 
+// Idempotent column additions for schema changes made after the initial
+// release (CREATE TABLE won't alter an existing table). Safe to run repeatedly.
+const COLUMN_MIGRATIONS = [
+  `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaAccessToken" TEXT`,
+  `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaTestEventCode" TEXT`,
+  `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaCapiEnabled" BOOLEAN NOT NULL DEFAULT false`,
+];
+
+async function ensureColumns(): Promise<number> {
+  let applied = 0;
+  for (const stmt of COLUMN_MIGRATIONS) {
+    try {
+      await prisma.$executeRawUnsafe(stmt);
+      applied++;
+    } catch (err) {
+      console.error("[setup] column migration failed:", stmt, err);
+    }
+  }
+  return applied;
+}
+
 async function ensureSchema(): Promise<{ created: number; skipped: number }> {
   let created = 0;
   let skipped = 0;
@@ -84,8 +105,9 @@ async function handle(req: Request) {
 
   try {
     const schema = await ensureSchema();
+    const columns = await ensureColumns();
     const seeded = await runSeed(prisma);
-    return NextResponse.json({ ok: true, schema, seeded, env: envStatus() });
+    return NextResponse.json({ ok: true, schema, columns, seeded, env: envStatus() });
   } catch (err) {
     console.error("[setup] Failed:", err);
     return NextResponse.json(

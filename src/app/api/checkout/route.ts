@@ -8,6 +8,7 @@ import { computeTotals } from "@/lib/pricing";
 import { getStripe } from "@/lib/stripe";
 import { dispatchWebhookEvent } from "@/lib/webhooks";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendMetaCapiEvent } from "@/lib/meta-capi";
 import { generateOrderNumber } from "@/lib/utils";
 
 const schema = z.object({
@@ -239,6 +240,47 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[checkout] confirmation email failed:", err);
+  }
+
+  // Server-side Meta Conversions API "Purchase" (reliable, no browser pixel
+  // needed). event_id = order number so it dedups with any client-side pixel.
+  try {
+    const cookie = req.headers.get("cookie") || "";
+    const fbp = cookie.match(/(?:^|; )_fbp=([^;]+)/)?.[1];
+    const fbc = cookie.match(/(?:^|; )_fbc=([^;]+)/)?.[1];
+    await sendMetaCapiEvent({
+      eventName: "Purchase",
+      eventId: order.orderNumber,
+      eventSourceUrl: req.headers.get("referer") || undefined,
+      userData: {
+        email: order.email,
+        phone: order.phone,
+        firstName: order.customerName.split(" ")[0],
+        lastName: order.customerName.split(" ").slice(1).join(" "),
+        city: order.shipCity,
+        state: order.shipState,
+        zip: order.shipPostalCode,
+        country: order.shipCountry,
+        clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        userAgent: req.headers.get("user-agent"),
+        fbp: fbp ? decodeURIComponent(fbp) : null,
+        fbc: fbc ? decodeURIComponent(fbc) : null,
+      },
+      customData: {
+        currency: store.currency,
+        value: order.totalCents / 100,
+        content_type: "product",
+        content_ids: lineItems.map((i) => i.productId),
+        contents: lineItems.map((i) => ({
+          id: i.productId,
+          quantity: i.quantity,
+          item_price: i.priceCents / 100,
+        })),
+        num_items: lineItems.reduce((n, i) => n + i.quantity, 0),
+      },
+    });
+  } catch (err) {
+    console.error("[checkout] Meta CAPI purchase failed:", err);
   }
 
   if (data.paymentMethod === "COD") {

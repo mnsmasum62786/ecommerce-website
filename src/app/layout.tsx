@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { ScriptInjector } from "@/components/scripts/script-injector";
+import { TrackingConfig } from "@/components/scripts/tracking-config";
 import { getStoreSettings } from "@/lib/settings";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -41,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background font-sans antialiased">
         {/* Custom Script Manager: body-start slot (GTM noscript, etc.). */}
         <ScriptInjector slot="bodyStart" />
+        {/* Exposes active analytics integrations to client tracking helpers. */}
+        <TrackingConfig />
         <Providers>{children}</Providers>
         <Toaster />
         {/* Custom Script Manager: footer slot. */}

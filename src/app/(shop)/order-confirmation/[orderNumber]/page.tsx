@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice, formatDate } from "@/lib/utils";
+import { PurchaseTracker } from "@/components/storefront/trackers";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,20 @@ export default async function OrderConfirmationPage({
 
   return (
     <div className="container max-w-3xl py-12">
+      {/* GA4 purchase event (Meta Purchase is sent server-side at checkout). */}
+      <PurchaseTracker
+        transactionId={order.orderNumber}
+        value={order.totalCents / 100}
+        tax={order.taxCents / 100}
+        shipping={order.shippingCents / 100}
+        coupon={order.couponCode ?? undefined}
+        items={order.items.map((i) => ({
+          item_id: i.productId ?? i.id,
+          item_name: i.name,
+          price: i.priceCents / 100,
+          quantity: i.quantity,
+        }))}
+      />
       <div className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600">
           <CheckCircle2 className="h-8 w-8" />

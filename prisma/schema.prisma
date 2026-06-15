@@ -274,6 +274,10 @@ model ScriptSettings {
   ga4Enabled      Boolean  @default(false)
   metaPixelId     String?
   metaPixelEnabled Boolean @default(false)
+  // Meta Conversions API (server-side) settings.
+  metaAccessToken   String?  @db.Text
+  metaTestEventCode String?
+  metaCapiEnabled   Boolean  @default(false)
   tiktokPixelId   String?
   tiktokEnabled   Boolean  @default(false)
   // Free-form raw script slots.
