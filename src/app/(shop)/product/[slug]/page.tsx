@@ -98,7 +98,14 @@ export default async function ProductDetailPage({
   }
 
   return (
-    <div className="container py-8">
+    <div
+      className="container py-8"
+      data-product-id={product.id}
+      data-product-name={product.name}
+      data-product-price={(product.priceCents / 100).toFixed(2)}
+      data-product-sku={product.sku ?? product.slug}
+      data-product-category={product.category.name}
+    >
       <ViewItemTracker
         item={{
           item_id: product.id,

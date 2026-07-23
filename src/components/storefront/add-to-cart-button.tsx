@@ -37,9 +37,18 @@ export function AddToCartButton({ product, withQuantity = false, className }: Pr
     setTimeout(() => setAdded(false), 1500);
   }
 
+  // Data attributes exposed on the DOM so GTM can scrape the product identity
+  // (Click Element / DOM variables) — same item_id sent to GA4/Meta.
+  const dataAttrs = {
+    "data-product-id": product.productId,
+    "data-product-name": product.name,
+    "data-product-price": (product.priceCents / 100).toFixed(2),
+    "data-product-sku": product.slug,
+  };
+
   if (outOfStock) {
     return (
-      <Button disabled variant="secondary" className={className}>
+      <Button disabled variant="secondary" className={className} {...dataAttrs}>
         Out of stock
       </Button>
     );
@@ -63,7 +72,7 @@ export function AddToCartButton({ product, withQuantity = false, className }: Pr
           </Button>
         </div>
       )}
-      <Button onClick={handleAdd} className={className}>
+      <Button onClick={handleAdd} className={className} data-add-to-cart="" {...dataAttrs}>
         {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
         {added ? "Added" : "Add to cart"}
       </Button>
