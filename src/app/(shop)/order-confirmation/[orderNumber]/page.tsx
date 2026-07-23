@@ -68,7 +68,12 @@ export default async function OrderConfirmationPage({
   ].filter(Boolean);
 
   return (
-    <div className="container max-w-3xl py-12">
+    <div
+      className="container max-w-3xl py-12"
+      data-transaction-id={order.orderNumber}
+      data-order-total={(order.totalCents / 100).toFixed(2)}
+      data-order-currency="USD"
+    >
       {/* GA4 purchase event (Meta Purchase is sent server-side at checkout). */}
       <PurchaseTracker
         transactionId={order.orderNumber}
@@ -111,7 +116,14 @@ export default async function OrderConfirmationPage({
           <h2 className="mb-3 font-semibold">Items</h2>
           <ul className="divide-y">
             {order.items.map((item) => (
-              <li key={item.id} className="flex justify-between py-3 text-sm">
+              <li
+                key={item.id}
+                className="flex justify-between py-3 text-sm"
+                data-product-id={item.productId ?? item.id}
+                data-product-name={item.name}
+                data-product-price={(item.priceCents / 100).toFixed(2)}
+                data-product-quantity={item.quantity}
+              >
                 <span>
                   {item.name} <span className="text-muted-foreground">× {item.quantity}</span>
                 </span>

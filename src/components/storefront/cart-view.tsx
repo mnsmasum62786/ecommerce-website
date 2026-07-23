@@ -45,7 +45,15 @@ export function CartView() {
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <ul className="divide-y rounded-xl border">
         {lines.map((line) => (
-          <li key={line.productId} className="flex gap-4 p-4">
+          <li
+            key={line.productId}
+            className="flex gap-4 p-4"
+            data-product-id={line.productId}
+            data-product-name={line.name}
+            data-product-price={(line.priceCents / 100).toFixed(2)}
+            data-product-sku={line.slug}
+            data-product-quantity={line.quantity}
+          >
             <Link
               href={`/product/${line.slug}`}
               className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-muted"

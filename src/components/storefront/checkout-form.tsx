@@ -352,7 +352,15 @@ export function CheckoutForm({
         <h2 className="font-semibold">Order summary</h2>
         <ul className="space-y-3">
           {lines.map((line) => (
-            <li key={line.productId} className="flex gap-3">
+            <li
+              key={line.productId}
+              className="flex gap-3"
+              data-product-id={line.productId}
+              data-product-name={line.name}
+              data-product-price={(line.priceCents / 100).toFixed(2)}
+              data-product-sku={line.slug}
+              data-product-quantity={line.quantity}
+            >
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
                 {line.imageUrl ? (
                   <Image src={line.imageUrl} alt={line.name} fill sizes="56px" className="object-cover" />
