@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { runSeed } from "@/lib/seed";
 import { SCHEMA_SQL } from "@/lib/schema-sql";
+import { generateApiKey } from "@/lib/api-auth";
 
 // SHA-256 of a one-time setup key. Only the hash is committed (safe for a public
 // repo — the key itself is preimage-resistant), so the database can be
@@ -97,8 +98,32 @@ function envStatus() {
   };
 }
 
+/**
+ * Optionally mint a REST API key during bootstrap (?bootstrapKey=1).
+ * Gated by the same secret that already permits full schema + seed access, so
+ * this grants no additional privilege — it exists so the API can be exercised
+ * before an admin has signed in. Reuses the single key named below rather than
+ * creating duplicates on repeated setup calls.
+ */
+async function bootstrapApiKey(): Promise<{ key: string; id: string } | null> {
+  const name = "Bootstrap key";
+  try {
+    const { key, keyHash, keyPrefix } = generateApiKey();
+    // Replace any previous bootstrap key so only one is ever valid.
+    await prisma.apiKey.deleteMany({ where: { name } });
+    const created = await prisma.apiKey.create({
+      data: { name, keyHash, keyPrefix, scopes: ["READ", "WRITE"] },
+    });
+    return { key, id: created.id };
+  } catch (err) {
+    console.error("[setup] Could not create bootstrap API key:", err);
+    return null;
+  }
+}
+
 async function handle(req: Request) {
-  const key = new URL(req.url).searchParams.get("key");
+  const url = new URL(req.url);
+  const key = url.searchParams.get("key");
   if (!isAuthorized(key)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -107,7 +132,8 @@ async function handle(req: Request) {
     const schema = await ensureSchema();
     const columns = await ensureColumns();
     const seeded = await runSeed(prisma);
-    return NextResponse.json({ ok: true, schema, columns, seeded, env: envStatus() });
+    const apiKey = url.searchParams.get("bootstrapKey") ? await bootstrapApiKey() : null;
+    return NextResponse.json({ ok: true, schema, columns, seeded, apiKey, env: envStatus() });
   } catch (err) {
     console.error("[setup] Failed:", err);
     return NextResponse.json(
