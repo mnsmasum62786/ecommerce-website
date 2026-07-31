@@ -52,7 +52,9 @@ export function newEventId(): string {
 
 function pushDataLayer(event: string, ecommerce: AnyObj) {
   const c = cfg();
-  if (!c.gtm && !c.ga4) return;
+  // Always push to the dataLayer — it's a passive data bus, so GTM reliably
+  // captures the event on first load even if its container (or window.__VT__)
+  // finished initializing after this runs. Harmless when GTM isn't installed.
   window.dataLayer = window.dataLayer || [];
   // Clear the previous ecommerce object first (GA4 recommended pattern).
   window.dataLayer.push({ ecommerce: null });

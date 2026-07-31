@@ -36,14 +36,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <head>
+        {/* Set the tracking config early (before hydration) so client event
+            helpers always know which integrations are active on first load. */}
+        <TrackingConfig />
         {/* Custom Script Manager: head slot (GTM, GA4, Meta Pixel, custom). */}
         <ScriptInjector slot="head" />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         {/* Custom Script Manager: body-start slot (GTM noscript, etc.). */}
         <ScriptInjector slot="bodyStart" />
-        {/* Exposes active analytics integrations to client tracking helpers. */}
-        <TrackingConfig />
         <Providers>{children}</Providers>
         <Toaster />
         {/* Custom Script Manager: footer slot. */}
