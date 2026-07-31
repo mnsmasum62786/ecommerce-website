@@ -30,6 +30,45 @@ A complete, production-ready **organic food e-commerce platform** built with Nex
 - **Webhook Manager** — outbound webhooks on order events with HMAC-SHA256 signing, delivery log, retry, and test sends
 - **Settings** — store name, logo, currency, shipping rates, tax, contact info, social links
 - **Admin Users** — create staff/admin accounts with role basics
+- **API Keys** — issue scoped keys so third-party platforms can manage the store over REST
+
+---
+
+## 🔌 Public REST API (v1)
+
+Third-party platforms can fully manage the store through a versioned REST API at `/api/v1`.
+
+**Authentication** — create a key in the admin panel under **API Keys**, then send it on every request:
+
+```bash
+curl "https://your-store.com/api/v1/products?limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+`X-API-Key: YOUR_API_KEY` also works. Keys carry **READ** or **WRITE** scope; write operations
+require a write-scoped key. Only a SHA-256 hash of each key is stored — the plaintext is shown once.
+
+**Resources**
+
+| Resource | Endpoints |
+|----------|-----------|
+| Products | `GET/POST /products`, `GET/PATCH/DELETE /products/{idOrSlug}` |
+| Categories | `GET/POST /categories`, `GET/PATCH/DELETE /categories/{idOrSlug}` |
+| Inventory | `GET /inventory`, `POST /inventory` (bulk set/adjust stock) |
+| Orders | `GET/POST /orders`, `GET/PATCH/DELETE /orders/{idOrNumber}` |
+| Customers | `GET/POST /customers`, `GET/PATCH/DELETE /customers/{idOrEmail}` |
+| Coupons | `GET/POST /coupons`, `GET/PATCH/DELETE /coupons/{idOrCode}` |
+| Store | `GET/PATCH /store` |
+
+**Conventions**
+- Success: `{ "data": … }` plus `meta` on paginated lists (`page`, `limit`, `total`, `totalPages`, `hasMore`)
+- Errors: `{ "error": { "code", "message", "details"? } }` with a matching HTTP status
+- Money is always integer **cents**, echoed as `{ "cents": 1499, "amount": "14.99" }`
+- Pagination: `?page=1&limit=25` (limit max 100)
+- Prices and stock are validated server-side on order creation — client-supplied prices are never trusted
+
+**Live reference:** `/api/v1/docs` (HTML) or `/api/v1/docs?format=json` (machine-readable).
+Prefer **webhooks** over polling for order events — configure them under **Webhooks** in the admin panel.
 
 ---
 

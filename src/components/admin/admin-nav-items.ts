@@ -10,6 +10,7 @@ import {
   Webhook,
   Settings,
   UserCog,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { href: "/admin/coupons", label: "Coupons", icon: Ticket },
   { href: "/admin/scripts", label: "Script Manager", icon: Code2 },
   { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
+  { href: "/admin/api-keys", label: "API Keys", icon: KeyRound },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/users", label: "Admin Users", icon: UserCog },
 ];

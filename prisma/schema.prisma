@@ -369,3 +369,32 @@ model ContactMessage {
   message   String   @db.Text
   createdAt DateTime @default(now())
 }
+
+// ---------------------------------------------------------------------------
+// Public REST API (v1) — API keys for third-party platform integrations
+// ---------------------------------------------------------------------------
+
+enum ApiScope {
+  READ
+  WRITE
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  // Only the SHA-256 hash of the key is stored; the plaintext key is shown
+  // exactly once at creation time.
+  keyHash     String    @unique
+  // Short non-secret prefix (e.g. "vrd_live_a1b2c3") used to identify the key
+  // in the admin UI without exposing the secret.
+  keyPrefix   String
+  scopes      ApiScope[] @default([READ])
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  requestCount Int      @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([keyHash])
+}
