@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export const OPTIONS = preflight;
 
 export const GET = withApiKey("READ", async (req, _ctx, key) => {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  // Strip any trailing slash so concatenated paths never double up ("//api/v1").
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).replace(/\/+$/, "");
   const v1 = `${baseUrl}/api/v1`;
 
   return ok({

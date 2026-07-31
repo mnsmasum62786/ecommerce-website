@@ -48,7 +48,8 @@ const ENDPOINTS: Endpoint[] = [
 ];
 
 function baseUrlFrom(req: Request): string {
-  return process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  // Strip any trailing slash so concatenated paths never double up ("//api/v1").
+  return (process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).replace(/\/+$/, "");
 }
 
 export async function GET(req: Request) {
