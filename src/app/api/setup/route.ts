@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { runSeed } from "@/lib/seed";
 import { SCHEMA_SQL } from "@/lib/schema-sql";
@@ -212,6 +213,36 @@ async function selfTestApi(origin: string) {
   return { passed: steps.filter((s) => s.ok).length, total: steps.length, steps };
 }
 
+/**
+ * Set the admin password to an explicit value and verify it (?resetAdmin=1&
+ * password=…). Deliberately does NOT run the seed, because seeding rewrites the
+ * admin password from the ADMIN_PASSWORD environment variable — so this is the
+ * authoritative way to establish a known working login.
+ */
+async function resetAdminPassword(email: string, password: string) {
+  const normalizedEmail = email.toLowerCase().trim();
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.upsert({
+    where: { email: normalizedEmail },
+    update: { passwordHash, role: "ADMIN" },
+    create: { email: normalizedEmail, name: "Store Admin", passwordHash, role: "ADMIN" },
+  });
+
+  // Re-read and verify exactly what NextAuth's authorize() will check, so the
+  // reported credentials are known-good rather than assumed.
+  const saved = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  const verified = saved?.passwordHash ? await bcrypt.compare(password, saved.passwordHash) : false;
+
+  return {
+    email: normalizedEmail,
+    password,
+    role: user.role,
+    verified,
+    loginUrl: `${(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "")}/login`,
+  };
+}
+
 async function handle(req: Request) {
   const url = new URL(req.url);
   const key = url.searchParams.get("key");
@@ -220,6 +251,19 @@ async function handle(req: Request) {
   }
 
   try {
+    // Admin credential reset — skips the seed so the password isn't overwritten.
+    if (url.searchParams.get("resetAdmin")) {
+      const email = url.searchParams.get("email") || process.env.ADMIN_EMAIL || "admin@verdantmarket.com";
+      const password = url.searchParams.get("password");
+      if (!password || password.length < 8) {
+        return NextResponse.json(
+          { ok: false, error: "Provide ?password= with at least 8 characters." },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json({ ok: true, admin: await resetAdminPassword(email, password) });
+    }
+
     // Self-test only: skip the (slower) schema + seed work.
     if (url.searchParams.get("selfTest")) {
       const origin = process.env.NEXT_PUBLIC_APP_URL || url.origin;
