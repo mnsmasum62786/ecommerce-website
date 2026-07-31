@@ -121,6 +121,97 @@ async function bootstrapApiKey(): Promise<{ key: string; id: string } | null> {
   }
 }
 
+/**
+ * Exercise the public REST API over real HTTP from inside the deployment
+ * (?selfTest=1). Mints a temporary write-scoped key, runs a read/write/delete
+ * round-trip against /api/v1, then revokes the key. Reports each step's status
+ * so the API can be verified without external header-capable access.
+ */
+async function selfTestApi(origin: string) {
+  const steps: { step: string; status: number; ok: boolean; detail?: string }[] = [];
+  const { key, keyHash, keyPrefix } = generateApiKey();
+  const temp = await prisma.apiKey.create({
+    data: { name: "Self-test (temporary)", keyHash, keyPrefix, scopes: ["READ", "WRITE"] },
+  });
+
+  const call = async (step: string, path: string, init?: RequestInit, useKey = true) => {
+    try {
+      const res = await fetch(`${origin}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(useKey ? { Authorization: `Bearer ${key}` } : {}),
+          ...(init?.headers as Record<string, string>),
+        },
+        cache: "no-store",
+      });
+      const body = await res.text();
+      steps.push({
+        step,
+        status: res.status,
+        ok: res.ok,
+        detail: body.slice(0, 160),
+      });
+      return { status: res.status, body };
+    } catch (err) {
+      steps.push({ step, status: 0, ok: false, detail: String(err).slice(0, 160) });
+      return { status: 0, body: "" };
+    }
+  };
+
+  try {
+    // Auth guard: no key must be rejected.
+    const unauth = await call("GET /api/v1/products (no key -> expect 401)", "/api/v1/products", {}, false);
+    steps[steps.length - 1].ok = unauth.status === 401;
+
+    await call("GET /api/v1 (index)", "/api/v1");
+    await call("GET /api/v1/products", "/api/v1/products?limit=2");
+    await call("GET /api/v1/categories", "/api/v1/categories?limit=2");
+    await call("GET /api/v1/orders", "/api/v1/orders?limit=2");
+    await call("GET /api/v1/customers", "/api/v1/customers?limit=2");
+    await call("GET /api/v1/inventory", "/api/v1/inventory?limit=2");
+    await call("GET /api/v1/coupons", "/api/v1/coupons?limit=2");
+    await call("GET /api/v1/store", "/api/v1/store");
+
+    // Write round-trip: create -> read -> update -> delete.
+    const created = await call("POST /api/v1/products (create)", "/api/v1/products", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `API Self Test ${Date.now()}`,
+        description: "Temporary product created by the API self-test. Safe to ignore.",
+        priceCents: 123,
+        stock: 5,
+        categorySlug: "pantry-staples",
+        isActive: false,
+      }),
+    });
+
+    let newId: string | null = null;
+    try {
+      newId = JSON.parse(created.body)?.data?.id ?? null;
+    } catch {
+      /* reported via the step detail above */
+    }
+
+    if (newId) {
+      await call("PATCH /api/v1/products/{id}", `/api/v1/products/${newId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ priceCents: 456, stock: 9 }),
+      });
+      await call("DELETE /api/v1/products/{id} (cleanup)", `/api/v1/products/${newId}`, {
+        method: "DELETE",
+      });
+    } else {
+      steps.push({ step: "write round-trip", status: 0, ok: false, detail: "No product id returned." });
+    }
+  } finally {
+    // Always revoke the temporary key.
+    await prisma.apiKey.delete({ where: { id: temp.id } }).catch(() => undefined);
+  }
+
+  return { passed: steps.filter((s) => s.ok).length, total: steps.length, steps };
+}
+
 async function handle(req: Request) {
   const url = new URL(req.url);
   const key = url.searchParams.get("key");
@@ -129,6 +220,12 @@ async function handle(req: Request) {
   }
 
   try {
+    // Self-test only: skip the (slower) schema + seed work.
+    if (url.searchParams.get("selfTest")) {
+      const origin = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+      return NextResponse.json({ ok: true, selfTest: await selfTestApi(origin) });
+    }
+
     const schema = await ensureSchema();
     const columns = await ensureColumns();
     const seeded = await runSeed(prisma);
