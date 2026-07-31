@@ -16,6 +16,9 @@ CREATE TYPE "DiscountType" AS ENUM ('PERCENT', 'FIXED');
 -- CreateEnum
 CREATE TYPE "DeliveryStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 
+-- CreateEnum
+CREATE TYPE "ApiScope" AS ENUM ('READ', 'WRITE');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -198,6 +201,9 @@ CREATE TABLE "ScriptSettings" (
     "ga4Enabled" BOOLEAN NOT NULL DEFAULT false,
     "metaPixelId" TEXT,
     "metaPixelEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "metaAccessToken" TEXT,
+    "metaTestEventCode" TEXT,
+    "metaCapiEnabled" BOOLEAN NOT NULL DEFAULT false,
     "tiktokPixelId" TEXT,
     "tiktokEnabled" BOOLEAN NOT NULL DEFAULT false,
     "headScripts" TEXT,
@@ -285,6 +291,23 @@ CREATE TABLE "ContactMessage" (
     CONSTRAINT "ContactMessage_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "ApiKey" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "keyHash" TEXT NOT NULL,
+    "keyPrefix" TEXT NOT NULL,
+    "scopes" "ApiScope"[] DEFAULT ARRAY['READ']::"ApiScope"[],
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "lastUsedAt" TIMESTAMP(3),
+    "requestCount" INTEGER NOT NULL DEFAULT 0,
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ApiKey_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -341,6 +364,12 @@ CREATE INDEX "WebhookDelivery_webhookId_idx" ON "WebhookDelivery"("webhookId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "NewsletterSubscriber_email_key" ON "NewsletterSubscriber"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ApiKey_keyHash_key" ON "ApiKey"("keyHash");
+
+-- CreateIndex
+CREATE INDEX "ApiKey_keyHash_idx" ON "ApiKey"("keyHash");
 
 -- AddForeignKey
 ALTER TABLE "Address" ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

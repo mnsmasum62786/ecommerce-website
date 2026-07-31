@@ -18,6 +18,9 @@ export type ScriptSettingsForm = {
   ga4Enabled: boolean;
   metaPixelId: string;
   metaPixelEnabled: boolean;
+  metaAccessToken: string;
+  metaTestEventCode: string;
+  metaCapiEnabled: boolean;
   tiktokPixelId: string;
   tiktokEnabled: boolean;
   headScripts: string;
@@ -161,7 +164,7 @@ export function ScriptManagerForm({ initial }: { initial: ScriptSettingsForm }) 
             title="Google Tag Manager"
             idLabel="Container ID"
             placeholder="GTM-XXXXXXX"
-            helper="Injects the GTM head snippet plus the body noscript fallback automatically."
+            helper="Injects the GTM snippet + body noscript, and pushes a full GA4-schema ecommerce dataLayer (view_item, add_to_cart, begin_checkout, purchase, …)."
             idValue={form.gtmId}
             onIdChange={(v) => set("gtmId", v)}
             enabled={form.gtmEnabled}
@@ -171,22 +174,66 @@ export function ScriptManagerForm({ initial }: { initial: ScriptSettingsForm }) 
             title="Google Analytics 4"
             idLabel="Measurement ID"
             placeholder="G-XXXXXXXXXX"
-            helper="Loads gtag.js and configures your GA4 property."
+            helper="Loads gtag.js and automatically tracks full ecommerce events (view_item, view_item_list, add_to_cart, begin_checkout, purchase)."
             idValue={form.ga4Id}
             onIdChange={(v) => set("ga4Id", v)}
             enabled={form.ga4Enabled}
             onToggle={(v) => set("ga4Enabled", v)}
           />
           <IntegrationRow
-            title="Meta Pixel"
+            title="Meta Pixel (browser)"
             idLabel="Pixel ID"
             placeholder="123456789012345"
-            helper="Adds the Meta (Facebook) Pixel base code and tracks PageView events."
+            helper="Adds the Meta (Facebook) Pixel base code in the browser (PageView). For server-side tracking use the Conversions API below instead."
             idValue={form.metaPixelId}
             onIdChange={(v) => set("metaPixelId", v)}
             enabled={form.metaPixelEnabled}
             onToggle={(v) => set("metaPixelEnabled", v)}
           />
+
+          {/* Meta Conversions API — pure server-side ecommerce tracking. */}
+          <Card>
+            <CardContent className="space-y-4 p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-medium">Meta Conversions API (server-side)</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Sends ecommerce events (ViewContent, AddToCart, InitiateCheckout, Purchase) directly
+                    from the server using your Pixel ID (above) and the access token below — no browser
+                    pixel required.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.metaCapiEnabled} onCheckedChange={(v) => set("metaCapiEnabled", v)} />
+                  <span className="text-xs text-muted-foreground">
+                    {form.metaCapiEnabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Access Token</Label>
+                <Input
+                  type="password"
+                  value={form.metaAccessToken}
+                  placeholder="EAAG... (System User access token)"
+                  onChange={(e) => set("metaAccessToken", e.target.value)}
+                  className="max-w-md font-mono text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Test Event Code (optional)</Label>
+                <Input
+                  value={form.metaTestEventCode}
+                  placeholder="TEST12345"
+                  onChange={(e) => set("metaTestEventCode", e.target.value)}
+                  className="max-w-xs font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set while testing in Events Manager → Test Events; clear it for production.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
           <IntegrationRow
             title="TikTok Pixel"
             idLabel="Pixel ID"

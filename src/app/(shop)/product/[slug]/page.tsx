@@ -7,6 +7,7 @@ import { toCard } from "@/lib/products";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { ProductCard } from "@/components/storefront/product-card";
 import { AddToCartButton } from "@/components/storefront/add-to-cart-button";
+import { ViewItemTracker } from "@/components/storefront/trackers";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
@@ -97,7 +98,22 @@ export default async function ProductDetailPage({
   }
 
   return (
-    <div className="container py-8">
+    <div
+      className="container py-8"
+      data-product-id={product.id}
+      data-product-name={product.name}
+      data-product-price={(product.priceCents / 100).toFixed(2)}
+      data-product-sku={product.sku ?? product.slug}
+      data-product-category={product.category.name}
+    >
+      <ViewItemTracker
+        item={{
+          item_id: product.id,
+          item_name: product.name,
+          price: product.priceCents / 100,
+          item_category: product.category.name,
+        }}
+      />
       <nav className="mb-6 flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
         <Link href="/products" className="hover:text-brand-600">
           Shop

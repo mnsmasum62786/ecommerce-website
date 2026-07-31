@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { ScriptInjector } from "@/components/scripts/script-injector";
+import { TrackingConfig } from "@/components/scripts/tracking-config";
 import { getStoreSettings } from "@/lib/settings";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -35,6 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <head>
+        {/* Set the tracking config early (before hydration) so client event
+            helpers always know which integrations are active on first load. */}
+        <TrackingConfig />
         {/* Custom Script Manager: head slot (GTM, GA4, Meta Pixel, custom). */}
         <ScriptInjector slot="head" />
       </head>

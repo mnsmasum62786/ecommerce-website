@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toCard } from "@/lib/products";
 import { ProductCard } from "@/components/storefront/product-card";
+import { ViewItemListTracker } from "@/components/storefront/trackers";
 import { CatalogControls } from "@/components/storefront/catalog-controls";
 import { CATEGORY_SEED } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,14 @@ export default async function ProductsPage({
 
   return (
     <div className="container py-8">
+      <ViewItemListTracker
+        listName={activeCategory ? activeCategory.name : "Shop All Products"}
+        items={products.map((p) => ({
+          item_id: p.id,
+          item_name: p.name,
+          price: p.priceCents / 100,
+        }))}
+      />
       <div className="mb-6">
         <h1 className="font-serif text-3xl font-bold text-brand-900">
           {activeCategory ? activeCategory.name : "Shop All Products"}

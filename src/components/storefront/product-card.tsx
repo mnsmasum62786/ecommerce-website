@@ -20,7 +20,13 @@ export type ProductCardData = {
 export function ProductCard({ product }: { product: ProductCardData }) {
   const onSale = product.compareAtCents && product.compareAtCents > product.priceCents;
   return (
-    <div className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
+    <div
+      className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md"
+      data-product-id={product.id}
+      data-product-name={product.name}
+      data-product-price={(product.priceCents / 100).toFixed(2)}
+      data-product-sku={product.slug}
+    >
       <Link href={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted">
         {product.imageUrl ? (
           <Image

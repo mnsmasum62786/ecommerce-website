@@ -37,6 +37,21 @@ This document records the assumptions and architectural choices made while build
 - Each delivery POSTs a JSON payload (order id, number, status, customer, items, totals, timestamp) with an **HMAC-SHA256 signature** in the `X-Verdant-Signature` header (and `X-Verdant-Event`), signed with the per-webhook secret so receivers can verify authenticity.
 - Deliveries are **logged** with status/response/attempts and **retried once** on failure. A "Test" button sends a sample payload. Dispatch is wrapped so webhook problems never block order processing.
 
+## Ecommerce tracking (GA4 + Meta CAPI)
+- **GA4 / GTM:** the storefront emits GA4-schema ecommerce events — `view_item_list`, `view_item`, `add_to_cart`, `begin_checkout`, and `purchase`. Events are pushed to `window.dataLayer` (consumed by GTM when a Container ID is set) and, when GA4 is configured directly (Measurement ID, no GTM), also sent via `gtag('event', …)`. `TrackingConfig` injects `window.__VT__` so the client helpers (`src/lib/analytics.ts`) know which integrations are active.
+- **Meta Conversions API (server-side):** when a Pixel ID + Access Token are set and CAPI is enabled in the Script Manager, ecommerce events are sent **server-side** — `ViewContent`, `AddToCart`, `InitiateCheckout` via `/api/track` (browser → our server → Meta), and `Purchase` directly from the checkout API for reliability. User data is SHA-256 hashed; `_fbp`/`_fbc`, IP, and user-agent are forwarded. See `src/lib/meta-capi.ts`.
+- **Browser + server deduplication:** if the browser Meta Pixel is *also* enabled, the client fires each ecommerce event via `fbq('track', …, { eventID })` using the **same `event_id`** that the server CAPI call carries, so Meta deduplicates the two copies. `Purchase` uses the order number as the shared `event_id`. Leaving the browser pixel toggle **off** gives pure server-side tracking (no dedup needed since there's a single source).
+- These activate purely from the admin **Script Manager** — no code changes needed.
+
+## Public REST API (v1)
+- **Separate auth from the admin panel.** `/api/v1/*` uses **API keys**, not NextAuth session cookies, because third-party platforms are machine clients. Middleware deliberately only guards `/admin` and `/api/admin`, so v1 routes are authenticated by `withApiKey()` in each handler instead.
+- **Keys are stored hashed** (SHA-256); the plaintext (`vrd_live_…`) is displayed exactly once at creation. A non-secret `keyPrefix` is kept so keys are identifiable in the admin UI. Usage (`lastUsedAt`, `requestCount`) is tracked best-effort and never blocks a response.
+- **Two scopes only** — `READ` and `WRITE` (write implies read). Finer-grained per-resource scopes were considered but rejected as over-engineering for the current surface; the model can be extended without breaking clients.
+- **Stable serializers** (`src/lib/api-serializers.ts`) decouple the public payload shape from the Prisma schema, so internal columns can change without breaking integrations. Money is exposed as both `cents` (authoritative) and a formatted `amount` string.
+- **Uniform envelopes** — `{ data, meta? }` for success, `{ error: { code, message, details? } }` for failures. Prisma error codes are translated centrally (`P2002` → 409, `P2025` → 404), and unexpected errors return 500 without leaking internals.
+- **Writes reuse the storefront's business rules**: order creation validates stock and recomputes totals from database prices (client prices are never trusted), applies coupons through the same `validateCoupon`, and fires the same outbound webhooks. Orders are **cancelled, never hard-deleted**, and cancelling restores stock.
+- **CORS is open (`*`)** because access is gated by the API key, not by origin — this lets server-side and browser-based integrations call the API directly.
+
 ## Shipping & tax (defaults)
 - Flat shipping **$5.99**, **free over $75**. Express delivery adds **$7.00**. Tax rate defaults to **0%** (configurable in Settings — sales tax varies by jurisdiction, so it's left for the operator to set).
 

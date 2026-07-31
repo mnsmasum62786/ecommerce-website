@@ -2,36 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  FolderTree,
-  ShoppingBag,
-  Users,
-  Boxes,
-  Ticket,
-  Code2,
-  Webhook,
-  Settings,
-  UserCog,
-  Leaf,
-  ExternalLink,
-} from "lucide-react";
+import { Leaf, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/categories", label: "Categories", icon: FolderTree },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/inventory", label: "Inventory", icon: Boxes },
-  { href: "/admin/coupons", label: "Coupons", icon: Ticket },
-  { href: "/admin/scripts", label: "Script Manager", icon: Code2 },
-  { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
-  { href: "/admin/users", label: "Admin Users", icon: UserCog },
-];
+import { ADMIN_NAV } from "@/components/admin/admin-nav-items";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -42,7 +15,7 @@ export function AdminSidebar() {
         Verdant Admin
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {NAV.map((item) => {
+        {ADMIN_NAV.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
