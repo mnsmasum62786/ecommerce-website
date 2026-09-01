@@ -12,6 +12,7 @@ const cardSelect = {
   unit: true,
   stock: true,
   isOrganic: true,
+  isBestSeller: true,
   images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
 } satisfies Prisma.ProductSelect;
 
@@ -27,6 +28,7 @@ export function toCard(p: RawCard): ProductCardData {
     unit: p.unit,
     stock: p.stock,
     isOrganic: p.isOrganic,
+    isBestSeller: p.isBestSeller,
     imageUrl: p.images[0]?.url ?? null,
   };
 }

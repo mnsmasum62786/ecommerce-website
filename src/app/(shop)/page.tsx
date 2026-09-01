@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Leaf, Truck, ShieldCheck, Sprout } from "lucide-react";
+import { ArrowRight, Leaf, Star, Truck, ShieldCheck, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/storefront/product-card";
 import { getFeaturedProducts, getBestSellers } from "@/lib/products";
@@ -80,9 +80,10 @@ export default async function HomePage() {
 
       {/* Trust badges */}
       <section className="border-y bg-card">
-        <div className="container grid gap-6 py-8 sm:grid-cols-3">
+        <div className="container grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: Sprout, title: "Certified Organic", desc: "USDA Organic & Non-GMO verified" },
+            { icon: Star, title: "4.8/5 shopper rating", desc: "Preview based on demo review data" },
             { icon: Truck, title: "Free Delivery", desc: "On orders over $75" },
             { icon: ShieldCheck, title: "Farm-Fresh Guarantee", desc: "Love it or your money back" },
           ].map((b) => (

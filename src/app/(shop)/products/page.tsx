@@ -29,6 +29,7 @@ const cardSelect = {
   unit: true,
   stock: true,
   isOrganic: true,
+  isBestSeller: true,
   images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
 } satisfies Prisma.ProductSelect;
 
