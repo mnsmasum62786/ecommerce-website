@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Leaf } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/components/storefront/add-to-cart-button";
+import { ProductRating } from "@/components/storefront/product-rating";
 import { formatPrice } from "@/lib/utils";
 
 export type ProductCardData = {
@@ -14,11 +15,15 @@ export type ProductCardData = {
   unit: string;
   stock: number;
   isOrganic: boolean;
+  isBestSeller: boolean;
   imageUrl: string | null;
 };
 
 export function ProductCard({ product }: { product: ProductCardData }) {
   const onSale = product.compareAtCents && product.compareAtCents > product.priceCents;
+  const savingsPercent = onSale
+    ? Math.round(((product.compareAtCents! - product.priceCents) / product.compareAtCents!) * 100)
+    : 0;
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
       <Link href={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted">
@@ -41,7 +46,8 @@ export function ProductCard({ product }: { product: ProductCardData }) {
               <Leaf className="h-3 w-3" /> Organic
             </Badge>
           )}
-          {onSale && <Badge variant="destructive">Sale</Badge>}
+          {product.isBestSeller && <Badge className="bg-amber-500 text-white hover:bg-amber-500">Best seller</Badge>}
+          {onSale && <Badge variant="destructive">Save {savingsPercent}%</Badge>}
           {product.stock <= 0 && <Badge variant="secondary">Sold out</Badge>}
         </div>
       </Link>
@@ -50,6 +56,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           <h3 className="line-clamp-2 font-medium leading-tight hover:text-brand-600">{product.name}</h3>
           <p className="mt-1 text-xs text-muted-foreground">per {product.unit}</p>
         </Link>
+        <ProductRating productId={product.id} slug={product.slug} compact className="mt-2" />
         <div className="mt-3 flex items-center gap-2">
           <span className="text-lg font-bold text-brand-700">{formatPrice(product.priceCents)}</span>
           {onSale && (
@@ -58,6 +65,16 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             </span>
           )}
         </div>
+        {product.stock > 0 && (
+          <p
+            className={
+              "mt-1.5 text-xs font-medium " +
+              (product.stock <= 5 ? "text-amber-700" : "text-brand-700")
+            }
+          >
+            {product.stock <= 5 ? `Only ${product.stock} left — order soon` : "In stock & ready to ship"}
+          </p>
+        )}
         <div className="mt-3">
           <AddToCartButton
             className="w-full"

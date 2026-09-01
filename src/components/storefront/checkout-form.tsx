@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Leaf, Loader2, Tag } from "lucide-react";
+import { Leaf, Loader2, LockKeyhole, ShieldCheck, Tag } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -424,6 +424,19 @@ export function CheckoutForm({
             "Place order"
           )}
         </Button>
+
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-brand-50 p-3 text-xs text-brand-900">
+          <span className="flex items-center gap-1.5 font-medium">
+            <LockKeyhole className="h-3.5 w-3.5" /> Secure checkout
+          </span>
+          <span className="flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="h-3.5 w-3.5" /> 30-day protection
+          </span>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Guest checkout available. Your order is covered by our refund or replacement promise.
+        </p>
 
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/cart" className="hover:underline">

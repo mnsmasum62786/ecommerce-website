@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Minus, Plus, Trash2, Leaf, ShoppingBag } from "lucide-react";
+import { LockKeyhole, Minus, Plus, RotateCcw, Trash2, Leaf, ShoppingBag, Truck } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
 
-export function CartView() {
+export function CartView({ freeShippingThreshold }: { freeShippingThreshold: number }) {
   const { lines, subtotalCents, updateQuantity, removeItem, isReady } = useCart();
+  const freeShippingRemaining = Math.max(0, freeShippingThreshold - subtotalCents);
+  const freeShippingProgress = Math.min(
+    100,
+    Math.round((subtotalCents / Math.max(freeShippingThreshold, 1)) * 100),
+  );
 
   if (!isReady) {
     return (
@@ -123,6 +128,27 @@ export function CartView() {
 
       <aside className="h-fit rounded-xl border p-5 lg:sticky lg:top-24">
         <h2 className="font-semibold">Order summary</h2>
+        <div className="mt-4 rounded-lg bg-brand-50 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-brand-800">
+            <Truck className="h-4 w-4" />
+            {freeShippingRemaining > 0
+              ? `${formatPrice(freeShippingRemaining)} away from free shipping`
+              : "Free shipping unlocked"}
+          </div>
+          <div
+            className="mt-2 h-2 overflow-hidden rounded-full bg-brand-100"
+            role="progressbar"
+            aria-label="Progress toward free shipping"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={freeShippingProgress}
+          >
+            <div
+              className="h-full rounded-full bg-brand-600 transition-[width]"
+              style={{ width: `${freeShippingProgress}%` }}
+            />
+          </div>
+        </div>
         <div className="mt-4 flex justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-medium">{formatPrice(subtotalCents)}</span>
@@ -137,6 +163,14 @@ export function CartView() {
         <Button asChild variant="ghost" className="mt-2 w-full">
           <Link href="/products">Continue shopping</Link>
         </Button>
+        <ul className="mt-4 space-y-2 border-t pt-4 text-xs text-muted-foreground">
+          <li className="flex items-center gap-2">
+            <LockKeyhole className="h-3.5 w-3.5 text-brand-700" /> Secure checkout
+          </li>
+          <li className="flex items-center gap-2">
+            <RotateCcw className="h-3.5 w-3.5 text-brand-700" /> 30-day refund or replacement
+          </li>
+        </ul>
       </aside>
     </div>
   );
