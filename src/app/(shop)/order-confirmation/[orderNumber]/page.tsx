@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PurchaseDataLayer } from "@/components/storefront/purchase-data-layer";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,32 @@ export default async function OrderConfirmationPage({
 
   return (
     <div className="container max-w-3xl py-12">
+      <PurchaseDataLayer
+        purchase={{
+          transactionId: order.orderNumber,
+          value: order.totalCents / 100,
+          tax: order.taxCents / 100,
+          shipping: order.shippingCents / 100,
+          coupon: order.couponCode ?? "",
+          items: order.items.map((item) => ({
+            item_id: item.productId ?? item.id,
+            item_name: item.name,
+            price: item.priceCents / 100,
+            quantity: item.quantity,
+          })),
+          billingInfo: {
+            full_name: order.customerName,
+            email: order.email,
+            phone: order.phone,
+            address_line_1: order.shipLine1,
+            address_line_2: order.shipLine2 ?? "",
+            city: order.shipCity,
+            state: order.shipState ?? "",
+            postal_code: order.shipPostalCode,
+            country: order.shipCountry,
+          },
+        }}
+      />
       <div className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600">
           <CheckCircle2 className="h-8 w-8" />
