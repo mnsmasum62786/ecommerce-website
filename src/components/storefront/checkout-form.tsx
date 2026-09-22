@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPrice } from "@/lib/utils";
+import { trackBeginCheckout } from "@/lib/analytics";
 
 // Delivery options mirror src/lib/pricing.ts (DELIVERY_OPTIONS).
 const DELIVERY_OPTIONS = [
@@ -70,6 +71,20 @@ export function CheckoutForm({
       router.replace("/cart");
     }
   }, [isReady, lines.length, submitting, router]);
+
+  const beganCheckout = React.useRef(false);
+  React.useEffect(() => {
+    if (!isReady || lines.length === 0 || beganCheckout.current) return;
+    beganCheckout.current = true;
+    trackBeginCheckout(
+      lines.map((line) => ({
+        item_id: line.productId,
+        item_name: line.name,
+        price: line.priceCents / 100,
+        quantity: line.quantity,
+      })),
+    );
+  }, [isReady, lines]);
 
   function update(field: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
