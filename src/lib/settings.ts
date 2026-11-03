@@ -35,9 +35,33 @@ export const getStoreSettings = cache(async (): Promise<StoreSettingsData> => {
   }
 });
 
+// Databases created before the Data Layer toggle existed lack the
+// "dataLayerEnabled" column. Prisma selects every model column, so reads would
+// fail and the storefront would silently drop ALL scripts until /api/setup is
+// re-run. Add the column once per server instance (idempotent no-op when it
+// already exists).
+let scriptSchemaReady: Promise<void> | null = null;
+
+export function ensureScriptSettingsSchema(): Promise<void> {
+  if (!scriptSchemaReady) {
+    scriptSchemaReady = prisma
+      .$executeRawUnsafe(
+        'ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "dataLayerEnabled" BOOLEAN NOT NULL DEFAULT false',
+      )
+      .then(() => undefined)
+      .catch((err) => {
+        // Allow a retry on the next request (e.g. DB briefly unreachable).
+        scriptSchemaReady = null;
+        throw err;
+      });
+  }
+  return scriptSchemaReady;
+}
+
 /** Read the script settings row used by the Custom Script Manager. */
 export const getScriptSettings = cache(async () => {
   try {
+    await ensureScriptSettingsSchema();
     return await prisma.scriptSettings.findUnique({ where: { id: "default" } });
   } catch {
     return null;

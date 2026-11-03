@@ -1,12 +1,19 @@
 // Client-side analytics dispatch. Builds GA4-schema ecommerce events and routes
 // them to the active integrations:
-//   - GTM  -> window.dataLayer (GA4 ecommerce schema)
+//   - Data Layer toggle -> window.dataLayer (GA4 ecommerce schema)
 //   - GA4  -> gtag('event', ...) (direct, when GTM is not used)
 //   - Meta -> POST /api/track (server-side Conversions API)
 //
 // Safe to call anywhere on the client; no-ops for integrations that aren't on.
 
-type VTConfig = { gtm: boolean; ga4: boolean; meta: boolean; metaPixel: boolean; currency: string };
+type VTConfig = {
+  gtm: boolean;
+  dataLayer: boolean;
+  ga4: boolean;
+  meta: boolean;
+  metaPixel: boolean;
+  currency: string;
+};
 
 type AnyObj = Record<string, unknown>;
 
@@ -31,6 +38,7 @@ function cfg(): VTConfig {
   return (
     (typeof window !== "undefined" && window.__VT__) || {
       gtm: false,
+      dataLayer: false,
       ga4: false,
       meta: false,
       metaPixel: false,
@@ -52,13 +60,14 @@ export function newEventId(): string {
 
 function pushDataLayer(event: string, ecommerce: AnyObj) {
   const c = cfg();
-  // Always push to the dataLayer — it's a passive data bus, so GTM reliably
-  // captures the event on first load even if its container (or window.__VT__)
-  // finished initializing after this runs. Harmless when GTM isn't installed.
-  window.dataLayer = window.dataLayer || [];
-  // Clear the previous ecommerce object first (GA4 recommended pattern).
-  window.dataLayer.push({ ecommerce: null });
-  window.dataLayer.push({ event, ecommerce });
+  // Push only when the admin "Data Layer" toggle is on. window.__VT__ is set
+  // in <head> before hydration, so the flag is reliable on first load.
+  if (c.dataLayer) {
+    window.dataLayer = window.dataLayer || [];
+    // Clear the previous ecommerce object first (GA4 recommended pattern).
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({ event, ecommerce });
+  }
   // When GA4 is configured directly (no GTM), also emit a gtag event.
   if (c.ga4 && !c.gtm && typeof window.gtag === "function") {
     window.gtag("event", event, ecommerce);

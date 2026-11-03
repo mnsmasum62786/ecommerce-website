@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, apiError } from "@/lib/api";
+import { ensureScriptSettingsSchema } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 const scriptSchema = z.object({
   gtmId: z.string().trim().optional().nullable(),
   gtmEnabled: z.boolean().default(false),
+  dataLayerEnabled: z.boolean().default(false),
   ga4Id: z.string().trim().optional().nullable(),
   ga4Enabled: z.boolean().default(false),
   metaPixelId: z.string().trim().optional().nullable(),
@@ -29,6 +31,7 @@ export async function GET() {
   const { error } = await requireAdmin();
   if (error) return error;
 
+  await ensureScriptSettingsSchema();
   const settings = await prisma.scriptSettings.findUnique({ where: { id: "default" } });
   return NextResponse.json({ settings });
 }
@@ -53,6 +56,7 @@ export async function PUT(req: Request) {
   const data = {
     gtmId: d.gtmId?.trim() || null,
     gtmEnabled: d.gtmEnabled,
+    dataLayerEnabled: d.dataLayerEnabled,
     ga4Id: d.ga4Id?.trim() || null,
     ga4Enabled: d.ga4Enabled,
     metaPixelId: d.metaPixelId?.trim() || null,
@@ -70,6 +74,7 @@ export async function PUT(req: Request) {
     footerEnabled: d.footerEnabled,
   };
 
+  await ensureScriptSettingsSchema();
   const settings = await prisma.scriptSettings.upsert({
     where: { id: "default" },
     create: { id: "default", ...data },

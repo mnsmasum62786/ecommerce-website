@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/admin/page-header";
 import { ScriptManagerForm } from "@/components/admin/script-manager-form";
+import { ensureScriptSettingsSchema } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 const DEFAULT_SCRIPTS = {
   gtmId: "",
   gtmEnabled: false,
+  dataLayerEnabled: false,
   ga4Id: "",
   ga4Enabled: false,
   metaPixelId: "",
@@ -24,11 +26,13 @@ const DEFAULT_SCRIPTS = {
 };
 
 export default async function ScriptsPage() {
+  await ensureScriptSettingsSchema();
   const row = await prisma.scriptSettings.findUnique({ where: { id: "default" } });
 
   const initial = {
     gtmId: row?.gtmId ?? "",
     gtmEnabled: row?.gtmEnabled ?? DEFAULT_SCRIPTS.gtmEnabled,
+    dataLayerEnabled: row?.dataLayerEnabled ?? DEFAULT_SCRIPTS.dataLayerEnabled,
     ga4Id: row?.ga4Id ?? "",
     ga4Enabled: row?.ga4Enabled ?? DEFAULT_SCRIPTS.ga4Enabled,
     metaPixelId: row?.metaPixelId ?? "",

@@ -51,6 +51,7 @@ const COLUMN_MIGRATIONS = [
   `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaAccessToken" TEXT`,
   `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaTestEventCode" TEXT`,
   `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "metaCapiEnabled" BOOLEAN NOT NULL DEFAULT false`,
+  `ALTER TABLE "ScriptSettings" ADD COLUMN IF NOT EXISTS "dataLayerEnabled" BOOLEAN NOT NULL DEFAULT false`,
 ];
 
 async function ensureColumns(): Promise<number> {

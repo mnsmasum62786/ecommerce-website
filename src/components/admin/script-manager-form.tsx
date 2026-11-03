@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 export type ScriptSettingsForm = {
   gtmId: string;
   gtmEnabled: boolean;
+  dataLayerEnabled: boolean;
   ga4Id: string;
   ga4Enabled: boolean;
   metaPixelId: string;
@@ -72,6 +73,33 @@ function IntegrationRow({
           </div>
           <p className="text-xs text-muted-foreground">{helper}</p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ToggleRow({
+  title,
+  helper,
+  enabled,
+  onToggle,
+}: {
+  title: string;
+  helper: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <Card>
+      <CardContent className="space-y-2 p-5">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="font-medium">{title}</h3>
+          <div className="flex items-center gap-2">
+            <Switch checked={enabled} onCheckedChange={onToggle} />
+            <span className="text-xs text-muted-foreground">{enabled ? "Enabled" : "Disabled"}</span>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{helper}</p>
       </CardContent>
     </Card>
   );
@@ -164,11 +192,17 @@ export function ScriptManagerForm({ initial }: { initial: ScriptSettingsForm }) 
             title="Google Tag Manager"
             idLabel="Container ID"
             placeholder="GTM-XXXXXXX"
-            helper="Injects the GTM snippet + body noscript, and pushes a full GA4-schema ecommerce dataLayer (view_item, add_to_cart, begin_checkout, purchase, …)."
+            helper="Injects only the GTM head snippet + body noscript. Turn off to remove the GTM script completely. Ecommerce dataLayer events are controlled by the Data Layer toggle below."
             idValue={form.gtmId}
             onIdChange={(v) => set("gtmId", v)}
             enabled={form.gtmEnabled}
             onToggle={(v) => set("gtmEnabled", v)}
+          />
+          <ToggleRow
+            title="Data Layer"
+            helper="Pushes a full GA4-schema ecommerce dataLayer (view_item, view_item_list, add_to_cart, begin_checkout, purchase, …) to window.dataLayer. Works independently of the Google Tag Manager toggle."
+            enabled={form.dataLayerEnabled}
+            onToggle={(v) => set("dataLayerEnabled", v)}
           />
           <IntegrationRow
             title="Google Analytics 4"

@@ -270,6 +270,10 @@ model ScriptSettings {
   // Managed integrations.
   gtmId           String?  // e.g. GTM-XXXXXXX
   gtmEnabled      Boolean  @default(false)
+  // Ecommerce dataLayer pushes (view_item, add_to_cart, begin_checkout,
+  // purchase, ...). Independent of GTM: the GTM toggle only controls the GTM
+  // script itself.
+  dataLayerEnabled Boolean @default(false)
   ga4Id           String?  // e.g. G-XXXXXXXXXX
   ga4Enabled      Boolean  @default(false)
   metaPixelId     String?

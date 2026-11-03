@@ -8,6 +8,9 @@ export async function TrackingConfig() {
 
   const config = {
     gtm: Boolean(scripts?.gtmEnabled && scripts?.gtmId),
+    // Separate admin toggle: ecommerce events reach window.dataLayer only
+    // when this is on, whether or not GTM is installed.
+    dataLayer: Boolean(scripts?.dataLayerEnabled),
     ga4: Boolean(scripts?.ga4Enabled && scripts?.ga4Id),
     meta: Boolean(scripts?.metaCapiEnabled && scripts?.metaPixelId && scripts?.metaAccessToken),
     metaPixel: Boolean(scripts?.metaPixelEnabled && scripts?.metaPixelId),
